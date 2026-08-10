@@ -1,0 +1,291 @@
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "common-base",
+            "description": "Common project configuration for all platform",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+                "CMAKE_DEBUG_POSTFIX": "d",
+                "CMAKE_RELWITHDEBINFO_POSTFIX": "rd",
+                "CMAKE_RELEASE_POSTFIX": "",
+                "CPACK_INCLUDE_TOPLEVEL_DIRECTORY": false,
+                "CMAKE_POSITION_INDEPENDENT_CODE": true,
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/install",
+                "CMAKE_FIND_PACKAGE_PREFER_CONFIG": true, 
+                "CMAKE_MODULE_PATH": "${sourceDir}/cmake"
+            }
+        },
+        {
+            "name": "windows-base",
+            "description": "Basic configurations for Windows platform",
+            "hidden": true,
+            "generator": "Visual Studio 17 2022",
+            "inherits": "common-base",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            }
+        },
+        {
+            "name": "clang-windows-base",
+            "description": "Basic configuration for clang Windows platform",
+            "hidden": true,
+            "generator": "Ninja Multi-Config",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "clang-cl",
+                "CMAKE_CXX_COMPILER": "clang-cl"
+            },
+            "inherits": "windows-base"
+        },
+        {
+            "name": "vc-amd64-vs2022-v141-base",
+            "description": "Visual Studio 17 2022 v141 build For Windows amd64",
+            "hidden": true,
+            "inherits": "windows-base",
+            "generator": "Visual Studio 17 2022",
+            "architecture": {
+                "strategy": "set",
+                "value": "x64"
+            },
+            "toolset": {
+                "strategy": "set",
+                "value": "v141,host=x64"
+            }
+        },
+        {
+            "name": "vc-amd64-vs2022-v143-base",
+            "description": "Visual Studio 17 2022 v143 build For Windows amd64",
+            "hidden": true,
+            "inherits": "windows-base",
+            "generator": "Visual Studio 17 2022",
+            "architecture": {
+                "strategy": "set",
+                "value": "x64"
+            },
+            "toolset": {
+                "strategy": "set",
+                "value": "v143,host=x64"
+            }
+        },
+        {
+            "name": "vc-amd64-vs2022-v142-base",
+            "description": "Visual Studio 17 2022 v143 build For Windows amd64",
+            "hidden": true,
+            "inherits": "windows-base",
+            "generator": "Visual Studio 17 2022",
+            "architecture": {
+                "strategy": "set",
+                "value": "x64"
+            },
+            "toolset": {
+                "strategy": "set",
+                "value": "v142,host=x64"
+            }
+        },
+        {
+            "name": "debug-base",
+            "description": "Debug Configuration",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "ENABLE_PERFETTO": true
+            }
+        },
+        {
+            "name": "release-base",
+            "description": "Release Configuration",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "relwithdebinfo-base",
+            "description": "RelWithDebInfo Configuration",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "ENABLE_PERFETTO": true
+            }
+        },
+        {
+            "name": "clang-amd64-windwos-debug-configure",
+            "description": "Clang build for windows amd64 debug configure",
+            "hidden": false,
+            "inherits": [
+                "clang-windows-base",
+                "debug-base"
+            ]
+        },
+        {
+            "name": "clang-amd64-windwos-release-configure",
+            "description": "Clang build for windows amd64 release configure",
+            "hidden": false,
+            "inherits": [
+                "clang-windows-base",
+                "release-base"
+            ]
+        },
+        {
+            "name": "clang-amd64-windwos-relwithdebinfo-configure",
+            "description": "Clang build for windows amd64 relwithdebinfo configure",
+            "hidden": false,
+            "inherits": [
+                "clang-windows-base",
+                "relwithdebinfo-base"
+            ]
+        },
+        {
+            "name": "vc-amd64-vs2022-v141-debug-configure",
+            "description": "Visual Studio 17 2022 v143 build For Windows amd64 debug configure",
+            "hidden": false,
+            "inherits": [
+                "vc-amd64-vs2022-v141-base",
+                "debug-base"
+            ]
+        },
+        {
+            "name": "vc-amd64-vs2022-v141-release-configure",
+            "description": "Visual Studio 17 2022 v143 build For Windows amd64 release configure",
+            "hidden": false,
+            "inherits": [
+                "vc-amd64-vs2022-v141-base",
+                "release-base"
+            ]
+        },
+        {
+            "name": "vc-amd64-vs2022-v141-relwithdebinfo-configure",
+            "description": "Visual Studio 17 2022 v143 build For Windows amd64 relwithdebinfo configure",
+            "hidden": false,
+            "inherits": [
+                "vc-amd64-vs2022-v141-base",
+                "relwithdebinfo-base"
+            ]
+        },
+        {
+            "name": "vc-amd64-vs2022-v142-debug-configure",
+            "description": "Visual Studio 17 2022 v142 build For Windows amd64 debug configure",
+            "hidden": false,
+            "inherits": [
+                "vc-amd64-vs2022-v142-base"
+            ]
+        },
+        {
+            "name": "vc-amd64-vs2022-v142-relwithdebinfo-configure",
+            "description": "Visual Studio 17 2022 v142 build For Windows amd64 relwithdebinfo configure",
+            "hidden": false,
+            "inherits": [
+                "vc-amd64-vs2022-v142-base"
+            ]
+        },
+        {
+            "name": "vc-amd64-vs2022-v142-release-configure",
+            "description": "Visual Studio 17 2022 v142 build For Windows amd64 release configure",
+            "hidden": false,
+            "inherits": [
+                "vc-amd64-vs2022-v142-base"
+            ]
+        },
+        {
+            "name": "vc-amd64-vs2022-v143-debug-configure",
+            "description": "Visual Studio 17 2022 v143 build For Windows amd64 debug configure",
+            "hidden": false,
+            "inherits": [
+                "vc-amd64-vs2022-v143-base"
+            ]
+        },
+        {
+            "name": "vc-amd64-vs2022-v143-release-configure",
+            "description": "Visual Studio 17 2022 v143 build For Windows amd64 release configure",
+            "hidden": false,
+            "inherits": [
+                "vc-amd64-vs2022-v143-base"
+            ]
+        },
+        {
+            "name": "vc-amd64-vs2022-v143-relwithdebinfo-configure",
+            "description": "Visual Studio 17 2022 v143 build For Windows amd64 relwithdebinfo configure",
+            "hidden": false,
+            "inherits": [
+                "vc-amd64-vs2022-v143-base"
+            ]
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "clang-amd64-windows-debug-build",
+            "displayName": "Clang amd64 debug build",
+            "configurePreset": "clang-amd64-windwos-debug-configure",
+            "configuration": "Debug"
+        },
+        {
+            "name": "clang-amd64-windows-release-build",
+            "displayName": "Clang amd64 release build",
+            "configurePreset": "clang-amd64-windwos-release-configure",
+            "configuration": "Release"
+        },
+        {
+            "name": "clang-amd64-windows-relwithdebinfo-build",
+            "displayName": "Clang amd64 relwithdebinfo build",
+            "configurePreset": "clang-amd64-windwos-relwithdebinfo-configure",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "vc-amd64-vs2022-v141-debug-build",
+            "displayName": "VC amd64 VS2022 v141 Debug build",
+            "configurePreset": "vc-amd64-vs2022-v141-debug-configure",
+            "configuration": "Debug"
+        },
+        {
+            "name": "vc-amd64-vs2022-v141-release-build",
+            "displayName": "VC amd64 VS2022 v141 Release build",
+            "configurePreset": "vc-amd64-vs2022-v141-release-configure",
+            "configuration": "Release"
+        },
+        {
+            "name": "vc-amd64-vs2022-v141-relwithdebinfo build",
+            "displayName": "VC amd64 VS2022 v141 RelWithDebInfo-build",
+            "configurePreset": "vc-amd64-vs2022-v141-relwithdebinfo-configure",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "vc-amd64-vs2022-v142-debug-build",
+            "displayName": "VC amd64 VS2022 v142 Debug build",
+            "configurePreset": "vc-amd64-vs2022-v142-debug-configure",
+            "configuration": "Debug"
+        },
+        {
+            "name": "vc-amd64-vs2022-v142-release-build",
+            "displayName": "VC amd64 VS2022 v142 Release build",
+            "configurePreset": "vc-amd64-vs2022-v142-release-configure",
+            "configuration": "Release"
+        },
+        {
+            "name": "vc-amd64-vs2022-v142-relwithdebinfo build",
+            "displayName": "VC amd64 VS2022 v142 RelWithDebInfo-build",
+            "configurePreset": "vc-amd64-vs2022-v142-relwithdebinfo-configure",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "vc-amd64-vs2022-v143-debug-build",
+            "displayName": "VC amd64 VS2022 v143 Debug build",
+            "configurePreset": "vc-amd64-vs2022-v143-debug-configure",
+            "configuration": "Debug"
+        },
+        {
+            "name": "vc-amd64-vs2022-v143-release-build",
+            "displayName": "VC amd64 VS2022 v143 Release build",
+            "configurePreset": "vc-amd64-vs2022-v143-release-configure",
+            "configuration": "Release"
+        },
+        {
+            "name": "vc-amd64-vs2022-v143-relwithdebinfo build",
+            "configurePreset": "vc-amd64-vs2022-v143-relwithdebinfo-configure",
+            "displayName": "VC amd64 VS2022 v143 RelWithDebInfo-build",
+            "configuration": "RelWithDebInfo"
+        }
+    ]
+}

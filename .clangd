@@ -1,0 +1,19 @@
+CompileFlags:
+  # 添加必要的编译器宏定义
+  Add:
+    - "-D_MSVC_LANG=201703L"
+    - "-fms-compatibility"
+    - "-fms-extensions"
+    - "-xc++"
+  
+  # 移除 clangd 无法识别的 MSVC 特定标志
+  Remove:
+    - "/nologo"
+    - "/FoRender*"
+    - "/FdRender*"
+    - "/FoWindow*"
+    - "/FdWindow*"
+
+Diagnostics:
+  UnusedIncludes: None
+  MissingIncludes: None

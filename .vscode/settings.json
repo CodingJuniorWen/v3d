@@ -1,0 +1,121 @@
+{
+    // ========================================
+    // Clangd 配置
+    // ========================================
+    
+    // clangd 可执行文件路径（如果在 PATH 中可以省略）
+    "clangd.path": "C:/DevSoft/LLVM/bin/clangd.exe",
+    
+    // clangd 启动参数
+    "clangd.arguments": [
+        // 后台索引：加快代码补全和跳转
+        "--background-index",
+        
+        // 编译命令数据库路径（CMake 生成的 compile_commands.json）
+        "--compile-commands-dir=${workspaceFolder}/out/build/clang-amd64-windwos-debug-configure",
+        
+        // 显示详细日志（调试用，正常使用可以去掉）
+        // "--log=verbose",
+        
+        // 补全样式
+        "--completion-style=detailed",
+        
+        // 头文件插入样式
+        "--header-insertion=iwyu",
+        
+        // 启用所有诊断
+        "--clang-tidy",
+        
+        // 限制使用的线程数
+        "-j=4",
+        
+        // pch 存储路径
+        "--pch-storage=memory",
+        
+        // 函数签名帮助
+        "--function-arg-placeholders",
+        
+        // 显示所有诊断信息
+        "--all-scopes-completion",
+        
+        // 代码补全结果数量
+        "--limit-results=0",
+        
+        // 启用建议
+        "--suggest-missing-includes"
+    ],
+    
+    // 文件监视排除
+    "clangd.onConfigChanged": "restart",
+    
+    // 在保存时检查
+    "clangd.checkUpdates": false,
+    
+    // ========================================
+    // C/C++ 扩展禁用（避免与 clangd 冲突）
+    // ========================================
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "C_Cpp.autocomplete": "disabled",
+    "C_Cpp.errorSquiggles": "disabled",
+    
+    // ========================================
+    // CMake 配置
+    // ========================================
+    "cmake.configureOnOpen": false,
+    "cmake.generator": "Ninja Multi-Config",
+    
+    // CMake 输出目录
+    "cmake.buildDirectory": "${workspaceFolder}/out/build/${presetName}",
+    
+    // CMake 使用 presets
+    "cmake.useCMakePresets": "always",
+    
+    // ========================================
+    // 编辑器配置
+    // ========================================
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+    
+    // 为 C/C++ 文件指定 clangd 格式化
+    "[cpp]": {
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+        "editor.formatOnSave": true,
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+    },
+    "[c]": {
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+        "editor.formatOnSave": true,
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+    },
+    "[cmake]": {
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+    },
+    "[json]": {
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true
+    },
+    
+    // ========================================
+    // 文件关联
+    // ========================================
+    "files.associations": {
+        "*.h": "cpp",
+        "*.hpp": "cpp",
+        "*.cpp": "cpp",
+        "*.cc": "cpp",
+        "*.cxx": "cpp"
+    },
+    
+    // ========================================
+    // 其他配置
+    // ========================================
+    "files.exclude": {
+        "**/.cache": true
+    }
+}
