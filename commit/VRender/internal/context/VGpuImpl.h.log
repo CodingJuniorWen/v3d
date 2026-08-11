@@ -1,0 +1,71 @@
+#pragma once
+#include <optional>
+#include <vector>
+
+#include "VSwapchainImpl.h"
+#include "VPhyDeviceImpl.h"
+#include "utils/QueueFamily.h"
+#include "vulkan/vulkan.hpp"
+#include "vulkan/vulkan_raii.hpp"
+
+namespace VRender {
+
+class VGpuImpl {
+ public:
+  VGpuImpl();
+  ~VGpuImpl();
+
+  bool Init(const VPhyDeviceImpl& phyDeviceImpl, vk::SurfaceKHR surface,
+            vk::Extent2D windowExtent);
+
+  bool recreateSwapchain(vk::Extent2D windowExtent);
+  void setRenderCommandCallback(
+      VSwapchainImpl::RenderCommandCallback callback) {
+    _swapchain.setRenderCommandCallback(std::move(callback));
+  }
+  void clearRenderCommandCallback() { _swapchain.clearRenderCommandCallback(); }
+  bool render() { return _swapchain.render(); }
+
+  void Shutdown();
+
+  vk::raii::Device& getDevice() { return _device; }
+  const vk::raii::Device& getDevice() const { return _device; }
+
+  vk::raii::Queue& getGraphicsQueue() { return _graphicsQueue; }
+  vk::raii::Queue& getPresentQueue() { return _presentQueue; }
+  vk::raii::Queue& getTransferQueue() { return _transferQueue; }
+
+  vk::raii::SwapchainKHR& getSwapchain() { return _swapchain.getSwapchain(); }
+  const vk::raii::SwapchainKHR& getSwapchain() const {
+    return _swapchain.getSwapchain();
+  }
+
+  const std::vector<vk::Image>& swapchainImages() const {
+    return _swapchain.swapchainImages();
+  }
+  const std::vector<vk::raii::ImageView>& swapchainImageViews() const {
+    return _swapchain.swapchainImageViews();
+  }
+
+  vk::Format swapchainImageFormat() const {
+    return _swapchain.swapchainImageFormat();
+  }
+  vk::Extent2D swapchainExtent() const { return _swapchain.swapchainExtent(); }
+
+ private:
+  bool createDevice(const VPhyDeviceImpl& phyDeviceImpl);
+
+ private:
+  std::optional<vk::raii::PhysicalDevice> _physicalDevice;
+  vk::SurfaceKHR _surface = nullptr;
+  utils::QueueFamilyIndices _queueIndices{};
+
+  vk::raii::Device _device = nullptr;
+  vk::raii::Queue _graphicsQueue = nullptr;
+  vk::raii::Queue _presentQueue = nullptr;
+  vk::raii::Queue _transferQueue = nullptr;
+
+  VSwapchainImpl _swapchain;
+};
+
+}  // namespace VRender

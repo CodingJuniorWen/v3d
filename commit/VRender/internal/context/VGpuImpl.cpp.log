@@ -1,0 +1,128 @@
+#include "VGpuImpl.h"
+
+#include <format>
+#include <set>
+#include <vector>
+
+#include "Logger.h"
+#include "utils/DeviceCapability.h"
+#include "vulkan/vulkan.hpp"
+#include "vulkan/vulkan_raii.hpp"
+
+namespace VRender {
+
+VGpuImpl::VGpuImpl() = default;
+
+VGpuImpl::~VGpuImpl() { Shutdown(); }
+
+bool VGpuImpl::Init(const VPhyDeviceImpl& phyDeviceImpl, vk::SurfaceKHR surface,
+                    vk::Extent2D windowExtent) {
+  if (!surface) {
+    UTILS_LOG_ERROR("VGpuImpl: Surface is null");
+    return false;
+  }
+
+  _surface = surface;
+
+  if (!createDevice(phyDeviceImpl)) {
+    return false;
+  }
+  if (!_swapchain.Init(*_physicalDevice, _device, _surface, _graphicsQueue,
+                       _presentQueue, _queueIndices, windowExtent)) {
+    return false;
+  }
+  return true;
+}
+
+bool VGpuImpl::createDevice(const VPhyDeviceImpl& phyDeviceImpl) {
+  const auto& indices = phyDeviceImpl.queueFamilyIndices();
+  if (!indices.isComplete()) {
+    UTILS_LOG_ERROR("VGpuImpl: Queue family indices are incomplete");
+    return false;
+  }
+
+  _physicalDevice = std::make_optional<vk::raii::PhysicalDevice>(
+      phyDeviceImpl.getPhysicalDevice());
+  _queueIndices = indices;
+
+  std::set<uint32_t> uniqueQueueFamilies = {
+      *_queueIndices.graphicsFamily,
+      *_queueIndices.presentFamily,
+      *_queueIndices.transferFamily,
+  };
+
+  const float queuePriority = 1.0f;
+  std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
+  queueCreateInfos.reserve(uniqueQueueFamilies.size());
+  for (uint32_t familyIndex : uniqueQueueFamilies) {
+    queueCreateInfos.push_back(vk::DeviceQueueCreateInfo()
+                                   .setQueueFamilyIndex(familyIndex)
+                                   .setQueueCount(1)
+                                   .setPQueuePriorities(&queuePriority));
+  }
+
+  vk::PhysicalDeviceVulkan12Features features12 =
+      vk::PhysicalDeviceVulkan12Features()
+          .setDescriptorIndexing(true)
+          .setShaderSampledImageArrayNonUniformIndexing(true)
+          .setRuntimeDescriptorArray(true)
+          .setDescriptorBindingVariableDescriptorCount(true)
+          .setDescriptorBindingPartiallyBound(true);
+
+  vk::PhysicalDeviceVulkan13Features features13 =
+      vk::PhysicalDeviceVulkan13Features()
+          .setDynamicRendering(true)
+          .setSynchronization2(true)
+          .setPNext(&features12);
+
+  vk::PhysicalDeviceFeatures2 features2 =
+      vk::PhysicalDeviceFeatures2()
+          .setFeatures(phyDeviceImpl.requiredFeatures())
+          .setPNext(&features13);
+
+  const auto extensionNames =
+      utils::toCStringPointers(phyDeviceImpl.requiredExtensions());
+
+  vk::DeviceCreateInfo deviceInfo =
+      vk::DeviceCreateInfo()
+          .setQueueCreateInfos(queueCreateInfos)
+          .setPEnabledExtensionNames(extensionNames)
+          .setPNext(&features2);
+
+  try {
+    _device = vk::raii::Device(phyDeviceImpl.getPhysicalDevice(), deviceInfo);
+  } catch (const vk::SystemError& error) {
+    UTILS_LOG_ERROR(
+        std::format("VGpuImpl: Failed to create device: {}", error.what()));
+    return false;
+  }
+
+  _graphicsQueue = _device.getQueue(*_queueIndices.graphicsFamily, 0);
+  _presentQueue = _device.getQueue(*_queueIndices.presentFamily, 0);
+  _transferQueue = _device.getQueue(*_queueIndices.transferFamily, 0);
+
+  UTILS_LOG_INFO("VGpuImpl: Logical device and queues created");
+  return true;
+}
+
+bool VGpuImpl::recreateSwapchain(vk::Extent2D windowExtent) {
+  return _swapchain.recreate(windowExtent);
+}
+
+void VGpuImpl::Shutdown() {
+  if (*_device) {
+    _device.waitIdle();
+  }
+
+  _swapchain.Shutdown();
+
+  _transferQueue = nullptr;
+  _presentQueue = nullptr;
+  _graphicsQueue = nullptr;
+  _device = nullptr;
+  _physicalDevice.reset();
+  _surface = nullptr;
+  _queueIndices = {};
+}
+
+}  // namespace VRender

@@ -1,0 +1,20 @@
+#pragma once
+
+#include "vulkan/vulkan.hpp"
+
+namespace VRender {
+
+class VCommandImpl {
+ public:
+  VCommandImpl();
+  explicit VCommandImpl(vk::CommandBuffer commandBuffer);
+
+  vk::CommandBuffer getCommandBuffer() const { return _commandBuffer; }
+  bool isValid() const;
+  void reset(vk::CommandBuffer commandBuffer = nullptr);
+
+ private:
+  vk::CommandBuffer _commandBuffer = nullptr;
+};
+
+}  // namespace VRender

@@ -1,0 +1,269 @@
+#include "VSwapchainImpl.h"
+
+#include <format>
+#include <limits>
+
+#include "Logger.h"
+#include "utils/SwapchainUtils.h"
+
+namespace VRender {
+
+VSwapchainImpl::VSwapchainImpl() = default;
+
+VSwapchainImpl::~VSwapchainImpl() { Shutdown(); }
+
+bool VSwapchainImpl::Init(const vk::raii::PhysicalDevice& physicalDevice,
+                          vk::raii::Device& device, vk::SurfaceKHR surface,
+                          vk::raii::Queue& graphicsQueue,
+                          vk::raii::Queue& presentQueue,
+                          const utils::QueueFamilyIndices& queueIndices,
+                          vk::Extent2D windowExtent) {
+  _physicalDevice = &physicalDevice;
+  _device = &device;
+  _graphicsQueue = &graphicsQueue;
+  _presentQueue = &presentQueue;
+  _surface = surface;
+  _queueIndices = queueIndices;
+  return create(windowExtent) && createSyncObjects();
+}
+
+bool VSwapchainImpl::create(vk::Extent2D windowExtent) {
+  if (_physicalDevice == nullptr || _device == nullptr || !**_device ||
+      !_surface) {
+    UTILS_LOG_ERROR("VSwapchainImpl: Device/surface not ready for swapchain");
+    return false;
+  }
+
+  const auto capabilities = _physicalDevice->getSurfaceCapabilitiesKHR(_surface);
+  const auto formats = _physicalDevice->getSurfaceFormatsKHR(_surface);
+  const auto presentModes = _physicalDevice->getSurfacePresentModesKHR(_surface);
+
+  if (formats.empty() || presentModes.empty()) {
+    UTILS_LOG_ERROR(
+        "VSwapchainImpl: No swapchain formats/present modes available");
+    return false;
+  }
+
+  const vk::SurfaceFormatKHR surfaceFormat =
+      utils::chooseSwapSurfaceFormat(formats);
+  const vk::PresentModeKHR presentMode =
+      utils::chooseSwapPresentMode(presentModes);
+  const vk::Extent2D extent =
+      utils::chooseSwapExtent(capabilities, windowExtent);
+
+  uint32_t imageCount = capabilities.minImageCount + 1;
+  if (capabilities.maxImageCount > 0 &&
+      imageCount > capabilities.maxImageCount) {
+    imageCount = capabilities.maxImageCount;
+  }
+
+  vk::SwapchainCreateInfoKHR createInfo =
+      vk::SwapchainCreateInfoKHR()
+          .setSurface(_surface)
+          .setMinImageCount(imageCount)
+          .setImageFormat(surfaceFormat.format)
+          .setImageColorSpace(surfaceFormat.colorSpace)
+          .setImageExtent(extent)
+          .setImageArrayLayers(1)
+          .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment)
+          .setPreTransform(capabilities.currentTransform)
+          .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
+          .setPresentMode(presentMode)
+          .setClipped(true)
+          .setOldSwapchain(nullptr);
+
+  const uint32_t queueFamilyIndices[] = {
+      *_queueIndices.graphicsFamily,
+      *_queueIndices.presentFamily,
+  };
+
+  if (*_queueIndices.graphicsFamily != *_queueIndices.presentFamily) {
+    createInfo.setImageSharingMode(vk::SharingMode::eConcurrent)
+        .setQueueFamilyIndices(queueFamilyIndices);
+  } else {
+    createInfo.setImageSharingMode(vk::SharingMode::eExclusive);
+  }
+
+  try {
+    _swapchain = vk::raii::SwapchainKHR(*_device, createInfo);
+  } catch (const vk::SystemError& error) {
+    UTILS_LOG_ERROR(std::format("VSwapchainImpl: Failed to create swapchain: {}",
+                                error.what()));
+    return false;
+  }
+
+  _swapchainImages = _swapchain.getImages();
+  _swapchainImageFormat = surfaceFormat.format;
+  _swapchainExtent = extent;
+
+  _swapchainImageViews.clear();
+  _swapchainImageViews.reserve(_swapchainImages.size());
+  for (const vk::Image image : _swapchainImages) {
+    vk::ImageViewCreateInfo viewInfo =
+        vk::ImageViewCreateInfo()
+            .setImage(image)
+            .setViewType(vk::ImageViewType::e2D)
+            .setFormat(_swapchainImageFormat)
+            .setComponents(vk::ComponentMapping{})
+            .setSubresourceRange(vk::ImageSubresourceRange(
+                vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+
+    _swapchainImageViews.emplace_back(*_device, viewInfo);
+  }
+
+  UTILS_LOG_INFO(
+      std::format("VSwapchainImpl: Swapchain created ({} images, {}x{})",
+                  _swapchainImages.size(), _swapchainExtent.width,
+                  _swapchainExtent.height));
+  return true;
+}
+
+bool VSwapchainImpl::createSyncObjects() {
+  if (_device == nullptr || !**_device) {
+    UTILS_LOG_ERROR("VSwapchainImpl: Device not ready for sync objects");
+    return false;
+  }
+
+  _imageAvailableSemaphores.clear();
+  _renderFinishedSemaphores.clear();
+  _inFlightFences.clear();
+
+  _imageAvailableSemaphores.reserve(kMaxFramesInFlight);
+  _renderFinishedSemaphores.reserve(kMaxFramesInFlight);
+  _inFlightFences.reserve(kMaxFramesInFlight);
+
+  vk::SemaphoreCreateInfo semaphoreInfo;
+  vk::FenceCreateInfo fenceInfo =
+      vk::FenceCreateInfo().setFlags(vk::FenceCreateFlagBits::eSignaled);
+
+  try {
+    for (uint32_t i = 0; i < kMaxFramesInFlight; ++i) {
+      _imageAvailableSemaphores.emplace_back(*_device, semaphoreInfo);
+      _renderFinishedSemaphores.emplace_back(*_device, semaphoreInfo);
+      _inFlightFences.emplace_back(*_device, fenceInfo);
+    }
+  } catch (const vk::SystemError& error) {
+    UTILS_LOG_ERROR(std::format(
+        "VSwapchainImpl: Failed to create sync objects: {}", error.what()));
+    destroySyncObjects();
+    return false;
+  }
+
+  _currentFrame = 0;
+  return true;
+}
+
+void VSwapchainImpl::destroy() {
+  _swapchainImageViews.clear();
+  _swapchainImages.clear();
+  _swapchain = nullptr;
+  _swapchainImageFormat = vk::Format::eUndefined;
+  _swapchainExtent = vk::Extent2D{0, 0};
+}
+
+void VSwapchainImpl::destroySyncObjects() {
+  _inFlightFences.clear();
+  _renderFinishedSemaphores.clear();
+  _imageAvailableSemaphores.clear();
+  _currentFrame = 0;
+}
+
+bool VSwapchainImpl::recreate(vk::Extent2D windowExtent) {
+  if (_device != nullptr && **_device) {
+    _device->waitIdle();
+  }
+
+  destroy();
+  return create(windowExtent);
+}
+
+void VSwapchainImpl::setRenderCommandCallback(RenderCommandCallback callback) {
+  _renderCommandCallback = std::move(callback);
+}
+
+void VSwapchainImpl::clearRenderCommandCallback() {
+  _renderCommandCallback = nullptr;
+}
+
+bool VSwapchainImpl::render() {
+  if (!_renderCommandCallback) {
+    UTILS_LOG_ERROR("VSwapchainImpl: Render command callback is not set");
+    return false;
+  }
+
+  if (_device == nullptr || _graphicsQueue == nullptr ||
+      _presentQueue == nullptr || !**_device || !*_swapchain) {
+    UTILS_LOG_ERROR("VSwapchainImpl: Render called before swapchain is ready");
+    return false;
+  }
+  if (_imageAvailableSemaphores.empty() || _renderFinishedSemaphores.empty() ||
+      _inFlightFences.empty()) {
+    UTILS_LOG_ERROR("VSwapchainImpl: Sync objects are not ready");
+    return false;
+  }
+
+  const vk::Fence inFlightFence = *_inFlightFences[_currentFrame];
+  const vk::Semaphore imageAvailable =
+      *_imageAvailableSemaphores[_currentFrame];
+  const vk::Semaphore renderFinished =
+      *_renderFinishedSemaphores[_currentFrame];
+
+  try {
+    (void)_device->waitForFences(inFlightFence, true,
+                                 std::numeric_limits<uint64_t>::max());
+
+    const auto acquireResult = _swapchain.acquireNextImage(
+        std::numeric_limits<uint64_t>::max(), imageAvailable);
+    const uint32_t imageIndex = acquireResult.second;
+    const VCommandImpl command = _renderCommandCallback(imageIndex, *this);
+    if (!command.isValid()) {
+      UTILS_LOG_ERROR("VSwapchainImpl: Render command callback returned null");
+      return false;
+    }
+
+    _device->resetFences(inFlightFence);
+
+    const vk::PipelineStageFlags waitStages[] = {
+        vk::PipelineStageFlagBits::eColorAttachmentOutput,
+    };
+    const vk::CommandBuffer commandBuffer = command.getCommandBuffer();
+
+    vk::SubmitInfo submitInfo =
+        vk::SubmitInfo()
+            .setWaitSemaphores(imageAvailable)
+            .setWaitDstStageMask(waitStages)
+            .setCommandBuffers(commandBuffer)
+            .setSignalSemaphores(renderFinished);
+
+    _graphicsQueue->submit(submitInfo, inFlightFence);
+
+    vk::PresentInfoKHR presentInfo =
+        vk::PresentInfoKHR()
+            .setWaitSemaphores(renderFinished)
+            .setSwapchains(*_swapchain)
+            .setImageIndices(imageIndex);
+
+    (void)_presentQueue->presentKHR(presentInfo);
+  } catch (const vk::SystemError& error) {
+    UTILS_LOG_ERROR(
+        std::format("VSwapchainImpl: Failed to render frame: {}", error.what()));
+    return false;
+  }
+
+  _currentFrame = (_currentFrame + 1) % kMaxFramesInFlight;
+  return true;
+}
+
+void VSwapchainImpl::Shutdown() {
+  destroySyncObjects();
+  destroy();
+  _physicalDevice = nullptr;
+  _device = nullptr;
+  _graphicsQueue = nullptr;
+  _presentQueue = nullptr;
+  _surface = nullptr;
+  _queueIndices = {};
+  _renderCommandCallback = nullptr;
+}
+
+}  // namespace VRender

@@ -1,0 +1,18 @@
+#include "VCommandImpl.h"
+
+namespace VRender {
+
+VCommandImpl::VCommandImpl() = default;
+
+VCommandImpl::VCommandImpl(vk::CommandBuffer commandBuffer)
+    : _commandBuffer(commandBuffer) {}
+
+bool VCommandImpl::isValid() const {
+  return _commandBuffer != vk::CommandBuffer{};
+}
+
+void VCommandImpl::reset(vk::CommandBuffer commandBuffer) {
+  _commandBuffer = commandBuffer;
+}
+
+}  // namespace VRender
