@@ -1,0 +1,139 @@
+#include "VPhyDeviceImpl.h"
+
+#include <algorithm>
+#include <format>
+#include <string_view>
+
+#include "Logger.h"
+#include "VInstanceImpl.h"
+#include "utils/DeviceCapability.h"
+#include "vulkan/vulkan.hpp"
+
+namespace VRender {
+
+VPhyDeviceImpl::VPhyDeviceImpl() = default;
+
+VPhyDeviceImpl::~VPhyDeviceImpl() = default;
+
+void VPhyDeviceImpl::setRequiredFeatures(
+    const vk::PhysicalDeviceFeatures& features) {
+  _requiredFeatures = features;
+}
+
+void VPhyDeviceImpl::requireFeature(
+    vk::Bool32 vk::PhysicalDeviceFeatures::* feature) {
+  _requiredFeatures.*feature = VK_TRUE;
+}
+
+const vk::PhysicalDeviceFeatures& VPhyDeviceImpl::requiredFeatures() const {
+  return _requiredFeatures;
+}
+
+void VPhyDeviceImpl::addRequiredExtension(std::string_view extension) {
+  if (extension.empty()) {
+    return;
+  }
+  const auto it = std::find(_requiredExtensions.begin(),
+                            _requiredExtensions.end(), extension);
+  if (it == _requiredExtensions.end()) {
+    _requiredExtensions.emplace_back(extension);
+  }
+}
+
+void VPhyDeviceImpl::clearRequiredExtensions() {
+  _requiredExtensions.clear();
+}
+
+const std::vector<std::string>& VPhyDeviceImpl::requiredExtensions() const {
+  return _requiredExtensions;
+}
+
+void VPhyDeviceImpl::setRequiredQueueFlags(vk::QueueFlags flags) {
+  _requiredQueueFlags = flags;
+}
+
+vk::QueueFlags VPhyDeviceImpl::requiredQueueFlags() const {
+  return _requiredQueueFlags;
+}
+
+vk::raii::PhysicalDevice& VPhyDeviceImpl::getPhysicalDevice() {
+  return *_physicalDevice;
+}
+
+const vk::raii::PhysicalDevice& VPhyDeviceImpl::getPhysicalDevice() const {
+  return *_physicalDevice;
+}
+
+const utils::QueueFamilyIndices& VPhyDeviceImpl::queueFamilyIndices() const {
+  return _queueIndices;
+}
+
+bool VPhyDeviceImpl::init(const VInstance& instance, vk::SurfaceKHR surface) {
+  if (!surface) {
+    UTILS_LOG_ERROR("VPhyDeviceImpl: Surface is null");
+    return false;
+  }
+  _instance = instance.getHandle();
+  _surface = surface;
+
+  auto& impl = instance._impl;
+  auto& vkInstance = impl->getInstance();
+  const auto physicalDevices = vkInstance.enumeratePhysicalDevices();
+  if (physicalDevices.empty()) {
+    UTILS_LOG_ERROR("VPhyDeviceImpl: No physical devices found");
+    return false;
+  }
+
+  for (const auto& device : physicalDevices) {
+    const auto properties = device.getProperties();
+    const std::string_view deviceName = properties.deviceName;
+
+    if (!isDeviceSuitable(device)) {
+      continue;
+    }
+
+    _queueIndices = utils::findQueueFamilies(device, _surface,
+                                             _requiredQueueFlags, deviceName);
+    if (!_queueIndices.isComplete()) {
+      continue;
+    }
+
+    _physicalDevice = std::make_optional<vk::raii::PhysicalDevice>(device);
+    UTILS_LOG_INFO(std::format(
+        "VPhyDeviceImpl: Suitable physical device found: {}", deviceName));
+    return true;
+  }
+
+  UTILS_LOG_ERROR("VPhyDeviceImpl: No suitable physical device found");
+  return false;
+}
+
+bool VPhyDeviceImpl::isDeviceSuitable(
+    const vk::raii::PhysicalDevice& device) const {
+  const auto properties = device.getProperties();
+  const std::string_view deviceName = properties.deviceName;
+
+  if (properties.deviceType != vk::PhysicalDeviceType::eDiscreteGpu) {
+    UTILS_LOG_WARN(
+        std::format("VPhyDeviceImpl: Skipping device '{}': not a discrete GPU",
+                    deviceName));
+    return false;
+  }
+  if (properties.apiVersion < VK_API_VERSION_1_3) {
+    UTILS_LOG_WARN(std::format(
+        "VPhyDeviceImpl: Skipping device '{}': Vulkan 1.3 not supported "
+        "(apiVersion={})",
+        deviceName, properties.apiVersion));
+    return false;
+  }
+  if (!utils::checkRequiredExtensions(device, _requiredExtensions, deviceName)) {
+    return false;
+  }
+  if (!utils::checkRequiredFeatures(_requiredFeatures, device.getFeatures(),
+                                    deviceName)) {
+    return false;
+  }
+  return true;
+}
+
+}  // namespace VRender

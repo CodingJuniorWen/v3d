@@ -1,0 +1,55 @@
+#pragma once
+
+#include "vulkan/vulkan.hpp"
+#include "vulkan/vulkan_raii.hpp"
+#include <cstdint>
+#include <string>
+#include <vector>
+#include <vulkan/vulkan_core.h>
+
+namespace VRender {
+
+class VInstanceImpl {
+  public:
+    VInstanceImpl();
+    ~VInstanceImpl();
+
+    void enableValidation();
+    void disableValidation();
+
+    void setApplicationInfo(const VkApplicationInfo &appInfo);
+    void setEnabledExtensions(const std::vector<std::string> &extensions);
+
+    void init();
+
+    vk::raii::Instance &getInstance() { return _instance; }
+
+  private:
+    VkApplicationInfo _appInfo{.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+                               .pNext = nullptr,
+                               .pApplicationName = "VRenderApp",
+                               .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
+                               .pEngineName = "VRenderEngine",
+                               .engineVersion = VK_MAKE_VERSION(1, 0, 0),
+                               .apiVersion = VK_API_VERSION_1_3};
+
+    VkInstanceCreateInfo _createInfo{.sType =
+                                         VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+                                     .pNext = nullptr,
+                                     .flags = 0,
+                                     .pApplicationInfo = &_appInfo,
+                                     .enabledLayerCount = 0,
+                                     .ppEnabledLayerNames = nullptr,
+                                     .enabledExtensionCount = 0,
+                                     .ppEnabledExtensionNames = nullptr};
+
+    std::vector<std::string> _enabledLayers;
+    std::vector<std::string> _enabledExtensions;
+    std::vector<const char *> _layerNames;
+    std::vector<const char *> _extensionNames;
+
+    vk::raii::Instance _instance{nullptr};
+    vk::raii::DebugUtilsMessengerEXT _debugUtilsMessenger{nullptr};
+};
+
+} // namespace VRender

@@ -1,0 +1,64 @@
+#include <format>
+
+#include "Logger.h"
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnullability-completeness"
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#pragma clang diagnostic ignored "-Wunused-parameter"
+#pragma clang diagnostic ignored "-Wunused-variable"
+#pragma clang diagnostic ignored "-Wunused-private-field"
+#endif
+
+#define VMA_IMPLEMENTATION
+#include "VBufferAllocImpl.h"
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
+namespace VRender {
+
+VBufferAllocImpl::VBufferAllocImpl() = default;
+
+VBufferAllocImpl::~VBufferAllocImpl() { shutdown(); }
+
+bool VBufferAllocImpl::init(VkInstance instance, VkPhysicalDevice physicalDevice,
+                            VkDevice device) {
+  if (_allocator) {
+    return true;
+  }
+  if (!instance || !physicalDevice || !device) {
+    UTILS_LOG_ERROR("VBufferAllocImpl: Invalid Vulkan handles");
+    return false;
+  }
+
+  VmaAllocatorCreateInfo createInfo{};
+  createInfo.instance = instance;
+  createInfo.physicalDevice = physicalDevice;
+  createInfo.device = device;
+  createInfo.vulkanApiVersion = VK_API_VERSION_1_3;
+
+  const VkResult result = vmaCreateAllocator(&createInfo, &_allocator);
+  if (result != VK_SUCCESS) {
+    UTILS_LOG_ERROR(std::format(
+        "VBufferAllocImpl: Failed to create VMA allocator: {}",
+        static_cast<int>(result)));
+    _allocator = VK_NULL_HANDLE;
+    return false;
+  }
+
+  return true;
+}
+
+void VBufferAllocImpl::shutdown() {
+  if (!_allocator) {
+    return;
+  }
+
+  vmaDestroyAllocator(_allocator);
+  _allocator = VK_NULL_HANDLE;
+}
+
+}  // namespace VRender

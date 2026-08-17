@@ -15,7 +15,7 @@ VGpuImpl::VGpuImpl() = default;
 
 VGpuImpl::~VGpuImpl() { Shutdown(); }
 
-bool VGpuImpl::Init(const VPhyDeviceImpl& phyDeviceImpl, vk::SurfaceKHR surface,
+bool VGpuImpl::init(const VPhyDeviceImpl& phyDeviceImpl, vk::SurfaceKHR surface,
                     vk::Extent2D windowExtent) {
   if (!surface) {
     UTILS_LOG_ERROR("VGpuImpl: Surface is null");
@@ -27,7 +27,11 @@ bool VGpuImpl::Init(const VPhyDeviceImpl& phyDeviceImpl, vk::SurfaceKHR surface,
   if (!createDevice(phyDeviceImpl)) {
     return false;
   }
-  if (!_swapchain.Init(*_physicalDevice, _device, _surface, _graphicsQueue,
+  if (!_bufferAllocator.init(phyDeviceImpl.getInstance(),
+                             *phyDeviceImpl.getPhysicalDevice(), *_device)) {
+    return false;
+  }
+  if (!_swapchain.init(*_physicalDevice, _device, _surface, _graphicsQueue,
                        _presentQueue, _queueIndices, windowExtent)) {
     return false;
   }
@@ -115,6 +119,7 @@ void VGpuImpl::Shutdown() {
   }
 
   _swapchain.Shutdown();
+  _bufferAllocator.shutdown();
 
   _transferQueue = nullptr;
   _presentQueue = nullptr;

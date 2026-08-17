@@ -1,0 +1,18 @@
+#pragma once
+#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_raii.hpp>
+
+namespace VRender {
+class VDescPoolImpl {
+ public:
+  VDescPoolImpl(const int& maxResource = 1024);
+  ~VDescPoolImpl() = default;
+
+  bool init(const vk::DescriptorType& type);
+
+ private:
+  vk::DescriptorType type_;
+  vk::raii::DescriptorPool pool_ = nullptr;
+};
+
+}  // namespace VRender

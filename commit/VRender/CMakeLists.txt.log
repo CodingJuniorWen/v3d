@@ -29,6 +29,8 @@ set(PRIVATE_SOURCE
     ${INTER_CONTEXT_SOURCE}/VInstanceImpl.h
     ${INTER_CONTEXT_SOURCE}/VPhyDeviceImpl.h
     ${INTER_CONTEXT_SOURCE}/VPhyDeviceImpl.cpp
+    ${INTER_CONTEXT_SOURCE}/VDescPoolImpl.h
+    ${INTER_CONTEXT_SOURCE}/VDescPoolImpl.cpp
 
     ${INTER_UTILS_SOURCE}/QueueFamily.h
     ${INTER_UTILS_SOURCE}/QueueFamily.cpp
@@ -39,6 +41,7 @@ set(PRIVATE_SOURCE
     ${INTER_UTILS_SOURCE}/GpuStruct.h
 
     ${INTER_BUFFER_SOURCE}/VBufferAllocImpl.h
+    ${INTER_BUFFER_SOURCE}/VBufferAllocImpl.cpp
 )
 
 set(PUBLIC_HEADER

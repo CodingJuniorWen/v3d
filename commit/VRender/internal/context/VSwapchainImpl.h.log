@@ -19,7 +19,7 @@ class VSwapchainImpl {
   VSwapchainImpl();
   ~VSwapchainImpl();
 
-  bool Init(const vk::raii::PhysicalDevice& physicalDevice,
+  bool init(const vk::raii::PhysicalDevice& physicalDevice,
             vk::raii::Device& device, vk::SurfaceKHR surface,
             vk::raii::Queue& graphicsQueue, vk::raii::Queue& presentQueue,
             const utils::QueueFamilyIndices& queueIndices,

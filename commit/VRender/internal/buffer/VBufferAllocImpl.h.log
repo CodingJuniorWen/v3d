@@ -1,0 +1,27 @@
+#pragma once
+
+#include "vk_mem_alloc.h"
+
+namespace VRender {
+
+class VBufferAllocImpl {
+ public:
+  VBufferAllocImpl();
+  ~VBufferAllocImpl();
+
+  VBufferAllocImpl(const VBufferAllocImpl&) = delete;
+  VBufferAllocImpl& operator=(const VBufferAllocImpl&) = delete;
+  VBufferAllocImpl(VBufferAllocImpl&&) = delete;
+  VBufferAllocImpl& operator=(VBufferAllocImpl&&) = delete;
+
+  bool init(VkInstance instance, VkPhysicalDevice physicalDevice,
+            VkDevice device);
+  void shutdown();
+
+  VmaAllocator getAllocator() const { return _allocator; }
+
+ private:
+  VmaAllocator _allocator = VK_NULL_HANDLE;
+};
+
+}  // namespace VRender
