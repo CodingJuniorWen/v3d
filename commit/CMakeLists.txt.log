@@ -1,0 +1,9 @@
+cmake_minimum_required(VERSION 3.20)
+project(VuRender)
+
+include(cmake/Configuration.cmake)
+include(CTest)
+
+add_subdirectory(Utils)
+add_subdirectory(VRender)
+add_subdirectory(VWindow)

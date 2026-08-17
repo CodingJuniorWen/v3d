@@ -1,0 +1,93 @@
+#include <gtest/gtest.h>
+
+#include <type_traits>
+
+#include "utils/GpuStruct.h"
+
+namespace VRender::utils {
+namespace {
+
+struct PlainType {};
+
+struct UnknownGpuStructType {
+  using GpuStructType = void;
+};
+
+struct Std140TestStruct {
+  AlignWrapperOf<AlignOf140<float>> scalar;
+  AlignWrapperOf<AlignOf140<glm::vec3>> vector;
+};
+
+using Std140TestStructLayout = AlignOfStruct140<Std140TestStruct, 16>;
+using Std140TestStructWrapper = AlignWrapperOf<Std140TestStructLayout>;
+
+struct Std430TestStruct {
+  AlignWrapperOf<AlignOf430<float>> scalar;
+  AlignWrapperOf<AlignOf430<glm::vec2>> vector;
+};
+
+using Std430TestStructLayout = AlignOfStruct430<Std430TestStruct, 8>;
+using Std430TestStructWrapper = AlignWrapperOf<Std430TestStructLayout>;
+
+TEST(GpuStructTests, HasGpuStructTypeAcceptsStd140AndStd430Wrappers) {
+  static_assert(HasGpuStructType<AlignOf140<float>>::value);
+  static_assert(HasGpuStructType<AlignOf430<float>>::value);
+
+  EXPECT_TRUE((HasGpuStructType<AlignOf140<float>>::value));
+  EXPECT_TRUE((HasGpuStructType<AlignOf430<float>>::value));
+}
+
+TEST(GpuStructTests, HasGpuStructTypeRejectsPlainAndUnknownTypes) {
+  static_assert(!HasGpuStructType<PlainType>::value);
+  static_assert(!HasGpuStructType<UnknownGpuStructType>::value);
+
+  EXPECT_FALSE((HasGpuStructType<PlainType>::value));
+  EXPECT_FALSE((HasGpuStructType<UnknownGpuStructType>::value));
+}
+
+TEST(GpuStructTests, AlignWrapperOfExposesWrappedStd140Data) {
+  AlignWrapperOf<AlignOf140<float>> wrapper;
+
+  *wrapper.get() = 3.5F;
+
+  EXPECT_FLOAT_EQ(*wrapper.get(), 3.5F);
+}
+
+TEST(GpuStructTests, AlignWrapperOfExposesWrappedStd430Data) {
+  AlignWrapperOf<AlignOf430<float>> wrapper;
+
+  *wrapper.get() = 7.25F;
+
+  EXPECT_FLOAT_EQ(*wrapper.get(), 7.25F);
+}
+
+TEST(GpuStructTests, Std140StructSizeSatisfiesDeclaredAlignment) {
+  static_assert(HasGpuStructType<Std140TestStructLayout>::value);
+  static_assert(Std140TestStructLayout::value == 16);
+  static_assert(alignof(Std140TestStruct) >= Std140TestStructLayout::value);
+  static_assert(sizeof(Std140TestStruct) % Std140TestStructLayout::value == 0);
+  static_assert(alignof(Std140TestStructWrapper) >= Std140TestStructLayout::value);
+  static_assert(sizeof(Std140TestStructWrapper) % Std140TestStructLayout::value ==
+                0);
+
+  EXPECT_EQ(Std140TestStructLayout::value, 16);
+  EXPECT_EQ(sizeof(Std140TestStruct) % Std140TestStructLayout::value, 0);
+  EXPECT_EQ(sizeof(Std140TestStructWrapper) % Std140TestStructLayout::value, 0);
+}
+
+TEST(GpuStructTests, Std430StructSizeSatisfiesDeclaredAlignment) {
+  static_assert(HasGpuStructType<Std430TestStructLayout>::value);
+  static_assert(Std430TestStructLayout::value == 8);
+  static_assert(alignof(Std430TestStruct) >= Std430TestStructLayout::value);
+  static_assert(sizeof(Std430TestStruct) % Std430TestStructLayout::value == 0);
+  static_assert(alignof(Std430TestStructWrapper) >= Std430TestStructLayout::value);
+  static_assert(sizeof(Std430TestStructWrapper) % Std430TestStructLayout::value ==
+                0);
+
+  EXPECT_EQ(Std430TestStructLayout::value, 8);
+  EXPECT_EQ(sizeof(Std430TestStruct) % Std430TestStructLayout::value, 0);
+  EXPECT_EQ(sizeof(Std430TestStructWrapper) % Std430TestStructLayout::value, 0);
+}
+
+}  // namespace
+}  // namespace VRender::utils

@@ -1,0 +1,19 @@
+find_package(GTest CONFIG REQUIRED
+  PATHS "${CMAKE_SOURCE_DIR}/package/GTest-1.12.1"
+  NO_DEFAULT_PATH
+)
+
+include(GoogleTest)
+
+add_executable(VRenderTests
+  GpuStructTests.cpp
+)
+
+setup_cpp_target(VRenderTests 20)
+
+target_link_libraries(VRenderTests PRIVATE
+  VRender
+  GTest::gtest_main
+)
+
+gtest_discover_tests(VRenderTests)

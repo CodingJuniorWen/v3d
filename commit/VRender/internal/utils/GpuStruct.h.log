@@ -1,0 +1,84 @@
+#pragma once
+#include <cstddef>
+#include <type_traits>
+
+#include "glm/mat3x3.hpp"
+#include "glm/mat4x4.hpp"
+#include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
+#include "glm/vec4.hpp"
+
+namespace VRender::utils {
+
+struct Struct140;
+struct Struct430;
+
+template <class StructType, class T, size_t Alignment>
+struct GpuStructMember : std::integral_constant<size_t, Alignment> {
+  using GpuStructType = StructType;
+  using ValueType = T;
+  ValueType data;
+};
+
+template <class T>
+struct AlignOf140 : GpuStructMember<Struct140, T, 16> {};
+template <>
+struct AlignOf140<float> : GpuStructMember<Struct140, float, 4> {};
+template <>
+struct AlignOf140<int> : GpuStructMember<Struct140, int, 4> {};
+template <>
+struct AlignOf140<glm::vec2> : GpuStructMember<Struct140, glm::vec2, 8> {};
+template <>
+struct AlignOf140<glm::vec3> : GpuStructMember<Struct140, glm::vec3, 16> {};
+template <>
+struct AlignOf140<glm::vec4> : GpuStructMember<Struct140, glm::vec4, 16> {};
+template <>
+struct AlignOf140<glm::mat3x3> : GpuStructMember<Struct140, glm::mat3x3, 16> {};
+template <>
+struct AlignOf140<glm::mat4x4> : GpuStructMember<Struct140, glm::mat4x4, 16> {};
+
+template <class T, size_t Alignment>
+struct AlignOfStruct140 : GpuStructMember<Struct140, T, Alignment> {};
+
+template <class T>
+struct AlignOf430 : GpuStructMember<Struct430, T, alignof(T)> {};
+template <>
+struct AlignOf430<float> : GpuStructMember<Struct430, float, 4> {};
+template <>
+struct AlignOf430<int> : GpuStructMember<Struct430, int, 4> {};
+template <>
+struct AlignOf430<glm::vec2> : GpuStructMember<Struct430, glm::vec2, 8> {};
+template <>
+struct AlignOf430<glm::vec3> : GpuStructMember<Struct430, glm::vec3, 16> {};
+template <>
+struct AlignOf430<glm::vec4> : GpuStructMember<Struct430, glm::vec4, 16> {};
+template <>
+struct AlignOf430<glm::mat3x3> : GpuStructMember<Struct430, glm::mat3x3, 16> {};
+template <>
+struct AlignOf430<glm::mat4x4> : GpuStructMember<Struct430, glm::mat4x4, 16> {};
+template <class T, size_t Alignment>
+struct AlignOfStruct430 : GpuStructMember<Struct430, T, Alignment> {};
+
+template <typename, typename = void>
+struct HasGpuStructType : std::false_type {};
+
+template <typename T>
+struct HasGpuStructType<T, std::void_t<typename T::GpuStructType>>
+    : std::bool_constant<std::is_same_v<typename T::GpuStructType, Struct140> ||
+                         std::is_same_v<typename T::GpuStructType, Struct430>> {
+};
+
+template <class T>
+class AlignWrapperOf {
+  static_assert(HasGpuStructType<T>::value,
+                "T must define a valid GpuStructType");
+
+ private:
+  alignas(T::value) T wrapper;
+
+ public:
+  const typename T::ValueType* get() const { return &(wrapper.data); }
+  typename T::ValueType* get() { return &(wrapper.data); }
+};
+
+}  // namespace VRender::utils
